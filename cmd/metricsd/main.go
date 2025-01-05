@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sort"
 	"sync"
 	"syscall"
 	"time"
@@ -15,14 +16,98 @@ import (
 )
 
 var (
-	conns map[*websocket.Conn]bool
-	m     sync.Mutex
+	metrics map[int64]*metric
+	conns   map[*websocket.Conn]bool
+	mi      sync.Mutex
+	m       sync.Mutex
 )
 
-func sendState(c *websocket.Conn) error {
-	sm := stateMessage{Now: time.Now().UnixMilli()}
+func pollTicker(timestamp int64) {
+	go func() {
+		ticker := time.NewTicker(1 * time.Second)
 
-	if err := c.WriteJSON(sm); err != nil {
+		for {
+
+			mi.Lock()
+			_, ok := metrics[timestamp]
+			mi.Unlock()
+
+			if !ok { // instrument has expired, stop polling
+				return
+			}
+
+			t := getTicker(metrics[timestamp].Name)
+			mi.Lock()
+			metrics[timestamp].Price = t.MarkPrice
+			metrics[timestamp].Index = t.IndexPrice
+			metrics[timestamp].Funding = t.CurrentFunding
+			mi.Unlock()
+
+			<-ticker.C
+		}
+	}()
+}
+
+func initMetrics() {
+	metrics = map[int64]*metric{}
+
+	go func() {
+		ticker := time.NewTicker(1 * time.Minute)
+
+		for {
+			timestamps := map[int64]bool{}
+			instruments := getInstruments()
+			mi.Lock()
+
+			for _, i := range instruments {
+				timestamps[i.ExpirationTimestamp] = true
+
+				if _, ok := metrics[i.ExpirationTimestamp]; !ok {
+					metrics[i.ExpirationTimestamp] = &metric{
+						Name:      i.InstrumentName,
+						Timestamp: i.ExpirationTimestamp}
+					pollTicker(i.ExpirationTimestamp)
+				}
+			}
+
+			// prune expired instruments
+			for timestamp, _ := range metrics {
+				if _, ok := timestamps[timestamp]; !ok {
+					delete(timestamps, timestamp)
+				}
+			}
+
+			mi.Unlock()
+
+			<-ticker.C
+		}
+	}()
+}
+
+func sendState(c *websocket.Conn) error {
+	mi.Lock()
+
+	results := make([]metric, len(metrics))
+	timestamps := make([]int, len(metrics))
+	i := 0
+
+	for _, metric := range metrics {
+		timestamps[i] = int(metric.Timestamp)
+		i++
+	}
+
+	sort.Ints(timestamps)
+
+	// perp has longest duration, add it first
+	results[0] = *metrics[int64(timestamps[len(timestamps)-1])]
+
+	for i := 1; i < len(timestamps); i++ {
+		results[i] = *metrics[int64(timestamps[i-1])]
+	}
+
+	mi.Unlock()
+
+	if err := c.WriteJSON(results); err != nil {
 		return err
 	}
 
@@ -92,6 +177,7 @@ func trapSigInt() {
 func main() {
 	slog.Info("Starting")
 
+	initMetrics()
 	initWS()
 	trapSigInt()
 

@@ -10,8 +10,12 @@ import (
 	_ "github.com/joho/godotenv/autoload"
 )
 
-type stateMessage struct {
-	Now int64 `json:"now"`
+type stateMessage []struct {
+	Name      string  `json:"name"`
+	Timestamp int64   `json:"timestamp"`
+	Price     float64 `json:"price"`
+	Index     float64 `json:"index"`
+	Funding   float64 `json:"funding"`
 }
 
 func main() {
@@ -41,6 +45,6 @@ func main() {
 		json.Unmarshal(message, &sm)
 
 		fmt.Println("\033[2J\033[H\033[?25l") // clear screen, move cursor to top of screen, hide cursor
-		fmt.Println(sm.Now)
+		fmt.Println(sm)
 	}
 }
