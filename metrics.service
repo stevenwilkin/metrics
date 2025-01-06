@@ -1,0 +1,13 @@
+[Unit]
+Description=Deribit metrics service
+
+[Service]
+Environment="METRICSD_PORT=8282"
+ExecStart=/usr/local/bin/metricsd
+Type=simple
+User=metrics
+Group=metrics
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
