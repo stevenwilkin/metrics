@@ -73,7 +73,7 @@ func initMetrics() {
 			// prune expired instruments
 			for timestamp, _ := range metrics {
 				if _, ok := timestamps[timestamp]; !ok {
-					delete(timestamps, timestamp)
+					delete(metrics, timestamp)
 				}
 			}
 
