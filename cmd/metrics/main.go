@@ -29,7 +29,6 @@ func tenor(ms int64) string {
 
 func display(sm stateMessage) {
 	fmt.Println("\033[2J\033[H\033[?25l") // clear screen, move cursor to top of screen, hide cursor
-	fmt.Println("")
 
 	for _, i := range sm {
 		msToExpiration := i.Timestamp - time.Now().UnixMilli()
