@@ -38,7 +38,7 @@ func display(sm stateMessage) {
 		annualisedYield := yield / (float64(msToExpiration) / (1000 * 60 * 60 * 24 * 365))
 
 		if i.Name == "BTC-PERPETUAL" {
-			fmt.Printf("  %-13s %8.2f            %8.6f%%\n", i.Name, premium, i.Funding*100)
+			fmt.Printf("  %-13s %8.2f           %9.6f%%\n", i.Name, premium, i.Funding*100)
 		} else {
 			fmt.Printf("  %-13s %8.2f %6.2f%% %s\n", i.Name, premium, annualisedYield*100, tenor(msToExpiration))
 		}
