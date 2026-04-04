@@ -25,7 +25,10 @@ func getJSON(path string, params url.Values, response interface{}) error {
 		return err
 	}
 
-	json.Unmarshal(body, &response)
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
