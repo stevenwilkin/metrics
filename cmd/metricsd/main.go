@@ -29,14 +29,14 @@ func pollTicker(timestamp int64) {
 		for {
 
 			mi.Lock()
-			_, ok := metrics[timestamp]
+			item, ok := metrics[timestamp]
 			mi.Unlock()
 
 			if !ok { // instrument has expired, stop polling
 				return
 			}
 
-			t := getTicker(metrics[timestamp].Name)
+			t := getTicker(item.Name)
 			mi.Lock()
 			metrics[timestamp].Price = t.MarkPrice
 			metrics[timestamp].Index = t.IndexPrice
