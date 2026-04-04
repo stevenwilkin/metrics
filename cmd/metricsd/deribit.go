@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -17,6 +18,10 @@ func getJSON(path string, params url.Values, response interface{}) error {
 	resp, err := http.Get(u.String())
 	if err != nil {
 		return err
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Returned HTTP %d", resp.StatusCode)
 	}
 
 	defer resp.Body.Close()
