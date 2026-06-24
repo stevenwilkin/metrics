@@ -174,7 +174,19 @@ func trapSigInt() {
 	<-c
 }
 
+func initLog() {
+	logLevel := slog.LevelInfo
+	if lvl := os.Getenv("LOG_LEVEL"); lvl != "" {
+		if err := logLevel.UnmarshalText([]byte(lvl)); err != nil {
+			slog.Warn(fmt.Sprintf("Unknown log level %q, defaulting to INFO", lvl))
+		}
+	}
+	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})))
+}
+
 func main() {
+	initLog()
+
 	slog.Info("Starting")
 
 	initMetrics()
