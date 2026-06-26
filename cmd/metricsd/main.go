@@ -25,6 +25,7 @@ var (
 func pollTicker(timestamp int64) {
 	go func() {
 		ticker := time.NewTicker(1 * time.Second)
+		defer ticker.Stop()
 
 		for {
 
