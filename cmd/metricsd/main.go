@@ -90,6 +90,11 @@ func initMetrics() {
 func sendState(c *websocket.Conn) error {
 	mi.Lock()
 
+	if len(metrics) == 0 {
+		mi.Unlock()
+		return nil
+	}
+
 	results := make([]metric, len(metrics))
 	timestamps := make([]int, len(metrics))
 	i := 0
