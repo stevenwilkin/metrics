@@ -39,9 +39,11 @@ func pollTicker(timestamp int64) {
 
 			t := getTicker(item.Name)
 			mi.Lock()
-			metrics[timestamp].Price = t.MarkPrice
-			metrics[timestamp].Index = t.IndexPrice
-			metrics[timestamp].Funding = t.CurrentFunding
+			if _, ok := metrics[timestamp]; ok {
+				metrics[timestamp].Price = t.MarkPrice
+				metrics[timestamp].Index = t.IndexPrice
+				metrics[timestamp].Funding = t.CurrentFunding
+			}
 			mi.Unlock()
 
 			<-ticker.C
