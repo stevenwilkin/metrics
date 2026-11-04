@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -27,22 +28,33 @@ func tenor(ms int64) string {
 	return fmt.Sprintf("%3dd %2dh %2dm", days, hours, minutes)
 }
 
+// render writes a frame using Synchronized Output (DEC mode 2026) so the
+// terminal paints it atomically, avoiding flicker between clear and redraw
+func render(f func(*strings.Builder)) {
+	var sb strings.Builder
+	sb.WriteString("\033[?2026h")              // begin synchronized update
+	sb.WriteString("\033[2J\033[H\033[?25l\n") // clear screen, move cursor to top of screen, hide cursor
+	f(&sb)
+	sb.WriteString("\033[?2026l") // end synchronized update
+	os.Stdout.WriteString(sb.String())
+}
+
 func display(sm stateMessage) {
-	fmt.Println("\033[2J\033[H\033[?25l") // clear screen, move cursor to top of screen, hide cursor
+	render(func(sb *strings.Builder) {
+		for _, i := range sm {
+			msToExpiration := i.Timestamp - time.Now().UnixMilli()
 
-	for _, i := range sm {
-		msToExpiration := i.Timestamp - time.Now().UnixMilli()
+			premium := i.Price - i.Index
+			yield := premium / i.Index
+			annualisedYield := yield / (float64(msToExpiration) / (1000 * 60 * 60 * 24 * 365))
 
-		premium := i.Price - i.Index
-		yield := premium / i.Index
-		annualisedYield := yield / (float64(msToExpiration) / (1000 * 60 * 60 * 24 * 365))
-
-		if i.Name == "BTC-PERPETUAL" {
-			fmt.Printf("  %-13s %8.2f           %9.6f%%\n", i.Name, premium, i.Funding*100)
-		} else {
-			fmt.Printf("  %-13s %8.2f %6.2f%% %s\n", i.Name, premium, annualisedYield*100, tenor(msToExpiration))
+			if i.Name == "BTC-PERPETUAL" {
+				fmt.Fprintf(sb, "  %-13s %8.2f           %9.6f%%\n", i.Name, premium, i.Funding*100)
+			} else {
+				fmt.Fprintf(sb, "  %-13s %8.2f %6.2f%% %s\n", i.Name, premium, annualisedYield*100, tenor(msToExpiration))
+			}
 		}
-	}
+	})
 }
 
 func main() {
