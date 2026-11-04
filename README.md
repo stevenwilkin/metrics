@@ -9,6 +9,11 @@ Client-server version of [premia](https://github.com/stevenwilkin/premia)
 	go build ./cmd/metrics
 
 
+### Cross compiling for Linux on macOS
+
+	GOOS=linux GOARCH=amd64 go build ./path/to/build
+
+
 ## Running
 
 	./metricsd
