@@ -22,43 +22,32 @@ var (
 	m       sync.Mutex
 )
 
-func pollTicker(timestamp int64) {
-	go func() {
-		ticker := time.NewTicker(1 * time.Second)
-		defer ticker.Stop()
+func updateTicker(name string, t ticker) {
+	mi.Lock()
+	defer mi.Unlock()
 
-		for {
-
-			mi.Lock()
-			item, ok := metrics[timestamp]
-			mi.Unlock()
-
-			if !ok { // instrument has expired, stop polling
-				return
-			}
-
-			t := getTicker(item.Name)
-			mi.Lock()
-			if _, ok := metrics[timestamp]; ok {
-				metrics[timestamp].Price = t.MarkPrice
-				metrics[timestamp].Index = t.IndexPrice
-				metrics[timestamp].Funding = t.CurrentFunding
-			}
-			mi.Unlock()
-
-			<-ticker.C
+	for _, item := range metrics {
+		if item.Name == name {
+			item.Price = t.MarkPrice
+			item.Index = t.IndexPrice
+			item.Funding = t.CurrentFunding
+			return
 		}
-	}()
+	}
 }
 
 func initMetrics() {
 	metrics = map[int64]*metric{}
+
+	streamTickers(updateTicker)
 
 	go func() {
 		ticker := time.NewTicker(1 * time.Minute)
 
 		for {
 			timestamps := map[int64]bool{}
+			added := []string{}
+			removed := []string{}
 			instruments := getInstruments()
 			mi.Lock()
 
@@ -69,18 +58,22 @@ func initMetrics() {
 					metrics[i.ExpirationTimestamp] = &metric{
 						Name:      i.InstrumentName,
 						Timestamp: i.ExpirationTimestamp}
-					pollTicker(i.ExpirationTimestamp)
+					added = append(added, i.InstrumentName)
 				}
 			}
 
 			// prune expired instruments
-			for timestamp, _ := range metrics {
+			for timestamp, item := range metrics {
 				if _, ok := timestamps[timestamp]; !ok {
+					removed = append(removed, item.Name)
 					delete(metrics, timestamp)
 				}
 			}
 
 			mi.Unlock()
+
+			unsubscribeTickers(removed)
+			subscribeTickers(added)
 
 			<-ticker.C
 		}

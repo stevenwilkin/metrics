@@ -23,6 +23,19 @@ type ticker struct {
 	CurrentFunding float64 `json:"current_funding"`
 }
 
-type tickerResponse struct {
-	Result ticker `json:"result"`
+type requestMessage struct {
+	JsonRpc string                 `json:"jsonrpc"`
+	Method  string                 `json:"method"`
+	Params  map[string]interface{} `json:"params,omitempty"`
+}
+
+type tickerMessage struct {
+	Method string `json:"method"`
+	Params struct {
+		Channel string `json:"channel"`
+		Data    struct {
+			InstrumentName string `json:"instrument_name"`
+			ticker
+		} `json:"data"`
+	} `json:"params"`
 }
